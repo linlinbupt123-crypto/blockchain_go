@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Go Program",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "~/Documents/XX/MyCoin/blockchain_go",
+      "env": {},
+      "args": []
+    },
+    {
+      "name": "Debug Test Function",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "~/Documents/XX/MyCoin/blockchain_go",
+      "env": {},
+      "args": ["-test.run", "TestFunctionName"]
+    }
+  ]
+}

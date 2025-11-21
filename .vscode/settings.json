@@ -1,0 +1,45 @@
+{
+  // Go 环境
+  "go.goroot": "~/.gvm/gos/go1.24.9",
+  "go.gopath": "~/.gvm/pkgsets/go1.24.9/global",
+  "go.inferGopath": false,
+
+  // 启用 Go 官方语言服务器 gopls
+  "go.useLanguageServer": true,
+  "go.languageServerFlags": ["serve"],
+
+  // 自动补全未导入包
+  "go.autocompleteUnimportedPackages": true,
+
+  // goimports == gofmt + 自动清理 import
+  "go.formatTool": "goimports",
+
+  // 保存自动格式化
+  "editor.formatOnSave": true,
+
+  // 保存时自动整理 import（交给 gopls/gofimports）
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "always"
+  },
+
+  // Lint
+  "go.lintTool": "golangci-lint",
+
+  // 文档
+  "go.docsTool": "gogetdoc",
+
+  // CodeLens 显示测试按钮
+  "go.enableCodeLens": {
+    "runtest": true
+  },
+
+  // 终端环境
+  "terminal.integrated.shellArgs.osx": ["-l"],
+  "terminal.integrated.env.osx": {
+    "PATH": "~/.gvm/pkgsets/go1.24.9/global/bin:${env:PATH}"
+  },
+
+  // 测试相关
+  "go.testFlags": ["-v"],
+  "go.coverOnSave": false
+}
