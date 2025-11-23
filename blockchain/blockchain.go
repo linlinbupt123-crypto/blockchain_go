@@ -66,37 +66,41 @@ func (chain *BlockChain) Iterator() *BlockChainIterator{
 	return iter
 }
 
-func (chain *BlockChain) AddBlock(transactions []*Transaction){
+func (chain *BlockChain) AddBlock(transactions []*Transaction) *Block {
 	var lastHash []byte
+
+	for _, tx := range transactions {
+		if !chain.VerifyTransaction(tx)  {
+			log.Panic("Invalid Transaction")
+		}
+	}
+
 	err := chain.Database.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte("lh"))
-		if err != nil{
-			return err
-		}
-		err = item.Value(func(val []byte) error {
+		common.HandlerError(err)
+		 err = item.Value(func(val []byte) error {
 			lastHash = append(lastHash, val...)
 			return nil
-		})
-		return err
+		 })
+		 return err
 	})
-	if err != nil {
-		common.HandlerError(err)
-	}
+	common.HandlerError(err)
+
 	newBlock := CreateBlock(transactions, lastHash)
-	
+
 	err = chain.Database.Update(func(txn *badger.Txn) error {
 		err := txn.Set(newBlock.Hash, newBlock.Serialize())
-		if err != nil {
-			return err
-		}
+		common.HandlerError(err)
 		err = txn.Set([]byte("lh"), newBlock.Hash)
+
 		chain.LastHash = newBlock.Hash
+
 		return err
 	})
-	if err != nil {
-		log.Panic(err)
-	}
+	common.HandlerError(err)
+	return newBlock
 }
+
 
 
 
@@ -218,35 +222,57 @@ func (chain *BlockChain) FindUnspentTransactions(pubKeyHash []byte) []Transactio
 	return unspentTxs
 }
 
-func (chain *BlockChain) FindUTXO(pubKeyHash []byte)[]TxOutput{
-	var UTXOs []TxOutput
-	unspentTransactions := chain.FindUnspentTransactions(pubKeyHash)
-	for _, tx := range unspentTransactions{
-		for _, out := range tx.Outputs{
-			if out.IsLockedWithKey(pubKeyHash){
-			UTXOs = append(UTXOs, out)
-		}
-		}
-	}
-	return UTXOs
-}
-func (chain *BlockChain) FindSpendableOutputs(pubKeyHash []byte, amount int)(int, map[string][]int){
-	unspentOuts := make(map[string][]int)
-	unspentTxs := chain.FindUnspentTransactions(pubKeyHash)
-	accumulated := 0
-	Work:
-	for _, tx := range unspentTxs{
-		txID:= hex.EncodeToString(tx.ID)
-		for outIdx, out := range tx.Outputs{
-			if out.IsLockedWithKey(pubKeyHash) && accumulated < amount{
-				accumulated +=out.Value
-				unspentOuts[txID] = append(unspentOuts[txID], outIdx)
-				if accumulated >= amount {
-					break Work
+func (chain *BlockChain) FindUTXO() map[string]TxOutputs{
+	UTXO := make(map[string]TxOutputs)
+	spentTXOs := make(map[string][]int)
+
+	iter := chain.Iterator()
+
+	for {
+		block := iter.Next()
+
+		for _, tx := range block.Transactions {
+			txID := hex.EncodeToString(tx.ID)
+
+		Outputs:
+			for outIdx, out := range tx.Outputs {
+				if spentTXOs[txID] != nil {
+					for _, spentOut := range spentTXOs[txID] {
+						if spentOut == outIdx {
+							continue Outputs
+						}
+					}
+				}
+				outs := UTXO[txID]
+				outs.Outputs = append(outs.Outputs, out)
+				UTXO[txID] = outs
+			}
+			if !tx.IsCoinBase() {
+				for _, in := range tx.Inputs {
+					inTxID := hex.EncodeToString(in.ID)
+					spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Out)
 				}
 			}
 		}
+
+		if len(block.PrevHash) == 0 {
+			break
+		}
+	}
+	return UTXO
+}
+
+func (bc *BlockChain) VerifyTransaction(tx *Transaction) bool {
+	if tx.IsCoinBase() {
+		return true
+	}
+	prevTXs := make(map[string]Transaction)
+
+	for _, in := range tx.Inputs {
+		prevTX, err := bc.FindTransaction(in.ID)
+		common.HandlerError(err)
+		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
 	}
 
-	return accumulated, unspentOuts
+	return tx.Verify(prevTXs)
 }

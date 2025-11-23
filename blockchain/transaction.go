@@ -118,8 +118,11 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 		keyLen := len(in.PubKey)
 		x.SetBytes(in.PubKey[:(keyLen / 2)])
 		y.SetBytes(in.PubKey[(keyLen / 2):])
-
-		rawPubKey := ecdsa.PublicKey{curve, &x, &y}
+		rawPubKey := ecdsa.PublicKey{
+			Curve: curve,
+			X:     &x,
+			Y:     &y,
+		}
 		return ecdsa.Verify(&rawPubKey, txCopy.ID, &r, &s) 
 	}
 
@@ -156,7 +159,7 @@ func (tx Transaction) Serialize() []byte {
 }
 
 
-func NewTransaction(from, to string, amount int, chain *BlockChain) *Transaction {
+func NewTransaction(from, to string, amount int, UTXO *UTXOSet) *Transaction {
 	var inputs []TxInput
 	var outputs []TxOutput
 
@@ -164,7 +167,7 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) *Transaction
 	common.HandlerError(err)
 	w := wallets.GetWallet(from)
 	pubKeyHash := wallet.PublicKeyHash(w.PublicKey)
-	acc, validOutputs := chain.FindSpendableOutputs(pubKeyHash, amount)
+	acc, validOutputs := UTXO.FindSpendableOutputs(pubKeyHash, amount)
 
 	if acc < amount {
 		log.Panic("Error: not enough funds")
@@ -192,7 +195,7 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) *Transaction
 	if err != nil {
 		common.HandlerError(err)
 	}
-	chain.SignTransaction(&tx, privateKey)
+	UTXO.Blockchain.SignTransaction(&tx, privateKey)
 
 	return &tx
 }

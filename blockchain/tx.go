@@ -1,8 +1,10 @@
 package blockchain
 
 import (
+	"blockchain_go/common"
 	"blockchain_go/wallet"
 	"bytes"
+	"encoding/gob"
 )
 
 // TxOutput, 在 UTXO 模型下，每个输出就是一笔未花费的“钱”，可以被某个公钥解锁。
@@ -16,6 +18,10 @@ type TxInput struct{
 	Out int    // 前一笔交易中输出的索引（哪一个输出被花掉）
 	Signature []byte  // 签名或数据，用于证明你有权花掉这个输出
 	PubKey    []byte
+}
+
+type TxOutputs struct {
+	Outputs []TxOutput
 }
 
 /*
@@ -44,6 +50,24 @@ func (out *TxOutput) IsLockedWithKey(pubKeyHash []byte) bool {
 func NewTXOutput(value int, address string) *TxOutput {
 	txo := &TxOutput{value, nil}
 	txo.Lock([]byte(address))
-
 	return txo
+}
+
+func (outs TxOutputs) Serialize() []byte {
+	var buffer bytes.Buffer
+
+	encode := gob.NewEncoder(&buffer)
+	err := encode.Encode(outs)
+	common.HandlerError(err)
+
+	return buffer.Bytes()
+}
+
+func DeserializeOutputs(data []byte) TxOutputs {
+	var outputs TxOutputs
+
+	decode := gob.NewDecoder(bytes.NewReader(data))
+	err := decode.Decode(&outputs)
+	common.HandlerError(err)
+	return outputs
 }

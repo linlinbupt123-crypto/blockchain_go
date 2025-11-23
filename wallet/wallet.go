@@ -33,7 +33,7 @@ func (w Wallet) Address() []byte {
 
 	return address
 }
-
+	
 func NewKeyPair() ([]byte, []byte) {
 	curve := elliptic.P256()
 
