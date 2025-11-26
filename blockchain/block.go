@@ -5,30 +5,30 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"log"
+	"time"
 )
 
 func Genesis(coinbase *Transaction) *Block {
-	return CreateBlock([]*Transaction{coinbase}, []byte{})
+	return CreateBlock([]*Transaction{coinbase}, []byte{}, 0)
 }
 
 type Block struct {
+	Timestamp    int64
 	Hash    []byte
 	Transactions    []*Transaction
 	PrevHash []byte
 	Nonce int
+	Height int
 }
 
-func CreateBlock(coinbase []*Transaction, prevHash []byte) *Block {
-	block := &Block{
-		Hash:    []byte{},
-		Transactions:    coinbase,
-		PrevHash: prevHash,
-		Nonce: 0,
-	}
+func CreateBlock(txs []*Transaction, prevHash []byte, height int) *Block {
+	block := &Block{time.Now().Unix(), []byte{}, txs, prevHash, 0, height}
 	pow := NewProof(block)
 	nonce, hash := pow.Run()
+
 	block.Hash = hash[:]
 	block.Nonce = nonce
+
 	return block
 }
 /*
@@ -74,7 +74,3 @@ func Deserialize(data []byte) *Block{
 	}
 	return &block
 }
-
-
-
-

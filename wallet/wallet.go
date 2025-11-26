@@ -6,7 +6,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/x509"
 	"log"
 
 	"golang.org/x/crypto/ripemd160"
@@ -18,7 +17,7 @@ const (
 )
 
 type Wallet struct {
-	PrivateKey []byte
+	PrivateKey ecdsa.PrivateKey
 	PublicKey  []byte
 }
 
@@ -33,8 +32,8 @@ func (w Wallet) Address() []byte {
 
 	return address
 }
-	
-func NewKeyPair() ([]byte, []byte) {
+
+func NewKeyPair() (ecdsa.PrivateKey, []byte) {
 	curve := elliptic.P256()
 
 	private, err := ecdsa.GenerateKey(curve, rand.Reader)
@@ -42,16 +41,9 @@ func NewKeyPair() ([]byte, []byte) {
 		log.Panic(err)
 	}
 
-	// encode private key to x509 (byte)
-	privBytes, err := x509.MarshalECPrivateKey(private)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	// public key: X || Y
 	pub := append(private.PublicKey.X.Bytes(), private.PublicKey.Y.Bytes()...)
-
-	return privBytes, pub
+	
+	return *private, pub
 }
 
 func MakeWallet() *Wallet {
@@ -59,6 +51,7 @@ func MakeWallet() *Wallet {
 	wallet := Wallet{private, public}
 
 	return &wallet
+	
 }
 
 func PublicKeyHash(pubKey []byte) []byte {
@@ -89,5 +82,5 @@ func ValidateAddress(address string) bool {
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-checksumLength]
 	targetChecksum := Checksum(append([]byte{version}, pubKeyHash...))
 
-	return bytes.Equal(actualChecksum, targetChecksum) 
+	return bytes.Equal(actualChecksum, targetChecksum)
 }
