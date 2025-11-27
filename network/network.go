@@ -440,7 +440,7 @@ func MineTx(chain *blockchain.BlockChain) {
 	txs = append(txs, cbTx)
 
 	newBlock := chain.MineBlock(txs)
-	UTXOSet  := blockchain.UTXOSet{chain}
+	UTXOSet  := blockchain.UTXOSet{Blockchain:chain}
 	UTXOSet.Reindex()
 
 	fmt.Println("New Block mined")
